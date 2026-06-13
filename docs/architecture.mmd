@@ -1,0 +1,80 @@
+flowchart TB
+    %% Channels
+    subgraph Channels["Channels"]
+        WA["WhatsApp Cloud API"]
+        VO["Voice — Bhashini (Indian languages)"]
+        APP["YONO / Mobile App"]
+        BM["Bank Mitra Portal"]
+    end
+
+    %% Orchestrator
+    subgraph Orchestrator["Orchestrator / Agent Fabric"]
+        ORC["LangGraph Orchestrator"]
+    end
+
+    %% Customer-facing Agents
+    subgraph CustomerAgents["Customer Agents"]
+        SW["Swagat — Onboarding"]
+        GU["Guru — Financial Literacy"]
+        DI["Disha — Proactive RM (Digital Engagement)"]
+    end
+
+    %% Domain Agents
+    subgraph DomainAgents["Domain Agents"]
+        KYC["KYC Agent"]
+        CR["Credit Agent"]
+        FR["Fraud Agent"]
+        SCH["Scheme-Eligibility Agent"]
+        PR["Product / RAG Agent"]
+    end
+
+    %% Governance Layer
+    subgraph Governance["Governance Layer (DBS PURE-inspired)"]
+        JU["Judge Agent (Claude)"]
+        POL["Policy-as-Code"]
+        TIER["Autonomy Tiers — T1 / T2 / T3"]
+        AUD["Immutable Audit Log"]
+        KILL["Kill Switch"]
+    end
+
+    %% Data Layer
+    subgraph Data["Data Layer"]
+        FLG["Financial Life Graph — Postgres + pgvector"]
+        RAG["RAG Corpus — Schemes, Products, Policies"]
+        SYN["Synthetic Customer Data"]
+    end
+
+    %% Inbound flows
+    WA --> ORC
+    VO --> ORC
+    APP --> ORC
+    BM --> ORC
+
+    %% Orchestrator to customer agents
+    ORC --> SW
+    ORC --> GU
+    ORC --> DI
+
+    %% Customer agents call domain agents
+    SW --> KYC
+    DI --> CR
+    DI --> SCH
+    DI --> FR
+    GU --> PR
+    SW --> PR
+
+    %% Engagement flow: Disha's action MUST pass through Governance
+    DI -- "proposed action" --> JU
+    JU --> POL
+    POL --> TIER
+    TIER -- "approved" --> AUD
+    AUD -- "deliver" --> ORC
+    TIER -- "blocked" --> KILL
+
+    %% Data access
+    DI --> FLG
+    SCH --> RAG
+    PR --> RAG
+    CR --> FLG
+    FR --> FLG
+    FLG --- SYN
