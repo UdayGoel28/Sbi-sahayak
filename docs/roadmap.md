@@ -1,50 +1,85 @@
-# SBI Sahayak — 30-Day Build Roadmap
+# SBI Sahayak — 30-Day Prototype Roadmap
 
-The prototype build kicks off if the idea is shortlisted on **15 July 2026**. The plan below assumes a solo build (Uday Goel) using Claude Code + Antigravity, with synthetic data throughout.
-
----
-
-## Week 1 — Foundation
-
-- Generate a synthetic customer dataset (~10k profiles: demographics, transactions, UPI history, salary credits, EMIs, bills).
-- Design the **Financial Life Graph** schema on PostgreSQL + pgvector — accounts, transactions, life-events, scheme-eligibility facts, embeddings of merchant/category context.
-- Stand up the FastAPI service, LangGraph orchestrator skeleton, and a single end-to-end "hello world" path: channel → orchestrator → agent → reply.
-- Load the RAG corpus: central + select state government schemes, SBI product fact-sheets, RBI customer-service guidelines.
-
-## Week 2 — Engagement core (Disha)
-
-- Build **Disha** as a LangGraph agent reading the Financial Life Graph.
-- Implement **Yojana Finder**: eligibility rules + LLM justification + in-chat enrollment flow over WhatsApp Cloud API.
-- Implement **Life-Event Prediction**: detectors for job change, salary jump, new dependent, medical spend, business inflow.
-- Implement **Bill Sense**: cash-flow forecaster that flags shortfalls ahead of scheduled debits.
-- Wire **Bhashini** for Hindi (and one regional) voice in/out.
-
-## Week 3 — Govern + evals
-
-- Build the **judge agent** (Claude) as an independent validator that scores every proposed Disha action.
-- Codify **policy-as-code**: RBI disclosure rules, consent, product-eligibility, tone, language constraints.
-- Implement **autonomy tiers** T1/T2/T3 and the **immutable audit log** (hash-chained).
-- Implement the **kill switch** (global / per-channel / per-tier).
-- Build an eval harness: 50+ scripted scenarios covering happy paths, mis-eligibility, hostile prompts, and consent violations.
-
-## Week 4 — Polish + pitch
-
-- **Bank Mitra co-pilot** tablet UI: customer summary, eligible schemes, next-best-action.
-- Record the three golden-path demos (below) end-to-end.
-- Build the pitch deck and a 3-minute submission video.
-- Final hardening: rate limits, observability, README polish, architecture diagram exports.
+> **Status:** Idea-submission stage. Build starts only if shortlisted (top 10 announced 15 Jul 2026).
+> Build window: **15 Jul – 14 Aug 2026** (30 days). Finalists announced 25 Aug.
+> Solo build — Claude Code (backend/agents) + Antigravity IDE (frontend/demo).
 
 ---
 
-## Demo Golden Paths
+## The rule: 3 golden paths built deep, not 10 features built shallow.
 
-Three demos that judges will see in the final video.
+**Golden Path 1 — Hindi WhatsApp Lakshya flow**
+Detect a savings pattern in synthetic UPI data → Disha proposes an opt-in goal on WhatsApp in Hindi via Bhashini → customer activates → Lakshya tracks progress.
 
-### 1. Hindi WhatsApp onboarding (Swagat)
-A new customer messages SBI on WhatsApp in Hindi. Swagat greets them, collects KYC fields conversationally, verifies via the KYC agent, and opens a basic savings account — all in Hindi, all under 3 minutes, with consent captured at each step.
+**Golden Path 2 — The mic-drop (Judge Agent blocks the sweep)**
+Disha attempts a scheduled Lakshya auto-sweep → Judge Agent detects an upcoming LIC premium via Bill Sense → BLOCKS the sweep with an explicit reason → shown live in the Langfuse audit panel. Safe, governed autonomy in one moment.
 
-### 2. Yojana Finder enrollment (Disha)
-Disha notices a customer's transaction pattern matches Sukanya Samriddhi eligibility (girl-child-related spend, age bracket, no existing SSA). It proactively messages the customer in their language, explains the scheme in one paragraph, answers two follow-up questions via the RAG-grounded Product agent, and enrolls them on the spot once they say yes.
+**Golden Path 3 — Credit Passport → eligible to apply**
+Thin-file customer (no CIBIL) → Rakshak computes an explainable behavioural score from synthetic data → Disha surfaces "you may be eligible to apply" → routed to T3 human approval (never auto-approved). Inclusion, done safely.
 
-### 3. Governed loan offer with live judge approval (Disha + Governance)
-Disha drafts a pre-approved personal-loan offer based on a salary jump it detected. Before the offer is sent, the **judge agent's verdict is shown on screen live**: policy checks, tone check, autonomy-tier verdict (T2 — needs customer confirm), audit-log entry. Only then does the offer reach WhatsApp. A second variant shows the judge **blocking** an over-aggressive offer, and the kill switch disabling the loan-offer capability with one click.
+*(Yojana Finder is a strong 4th path if time allows. Victim-Shield / Scam-Shield remain roadmap.)*
+
+---
+
+## Week-by-week plan
+
+### Week 1 — Foundation (Days 1–7)
+*Goal: everything else depends on this. Get it right before building agents.*
+
+- **D1** — Repo layout (`app/ agents/ governance/ data/ rag/ llm/ demo/ evals/`). Write `llm/llm_client.py`: a single `complete(messages, model)` function wrapping the Claude API (default) and OpenAI API (judge), selected by env var. Tiny `__main__` test to confirm it works.
+- **D2–3** — Synthetic data generator (`data/synth_generator.py`): 1,000 customer profiles × 12 months of UPI/bank history. Deliberately pattern the data: electronics browsing spend for Lakshya, farm-input purchases for PM-Kisan, LIC recurring debit for Bill Sense. **Critically:** create at least one customer whose balance covers either a Lakshya sweep OR an LIC premium — not both. That's the mic-drop setup.
+- **D4** — Financial Life Graph feature extraction: from raw transactions compute per-customer signals (recurring_payments, salary_trend, category_spend, life_event_flags). Store in Postgres.
+- **D5** — RAG pipeline (`rag/ingest.py` + `rag/retriever.py`): load SBI public product docs + government scheme rules into pgvector.
+- **D6** — Disha v0 in plain Python (no LangGraph yet): take a customer's Life Graph + a question, call the model with RAG context, return a grounded answer.
+- **D7** — Governance v0: `governance/policies.py` (10 encoded rules), `governance/audit.py` (append-only log). Internal demo #1: ask Disha → see response → see action logged.
+
+### Week 2 — Engagement core + channels (Days 8–14)
+*Goal: the 3 golden paths working end-to-end.*
+
+- **D8** — Lakshya Engine: pattern detection → goal proposal flow. Explicit customer opt-in required before any sweep.
+- **D9** — Bill Sense: recurring-payment detection + shortfall prediction. Wire to upcoming_payments table.
+- **D10** — Yojana Finder: eligibility engine over synthetic profile + scheme rules from RAG. Encode 8–10 schemes.
+- **D11** — Credit Passport (Rakshak): interpretable scoring function over behavioural features (payment regularity, cash-flow stability, bounce rate). Output is "eligible to apply" signal only — never a rate or approval promise.
+- **D12** — Introduce LangGraph: refactor Disha into a small state graph (detect → reason → draft → governance node → respond). You understand the pieces now; LangGraph earns its place here.
+- **D13** — Channel: WhatsApp Cloud API + Bhashini Hindi TTS. Wire one full golden path: WhatsApp message in → Disha → governed response in Hindi.
+- **D14** — Internal demo #2 + fix list.
+
+### Week 3 — Governance properly + prove it (Days 15–21)
+*Goal: the differentiator. Most teams skip this entirely.*
+
+- **D15–16** — Judge Agent (`governance/judge.py`): the second model validates every proposed action against policy-as-code. Pass/block/escalate. Returns a structured verdict + human-readable reason.
+- **D17** — Autonomy tiers + kill switch UI: T1 auto, T2 customer-confirm, T3 human-approval. Per-agent kill switch toggle shown in the demo UI.
+- **D18** — Live audit panel (Antigravity): a visible side panel showing each action → Judge verdict → outcome in real time. This is what wins bank judges — make it visible, not just logged.
+- **D19–20** — Eval harness (`evals/`): 100 test conversations. Measure hallucination rate, containment rate, escalation accuracy. Report as real numbers in the pitch.
+- **D21** — Tune based on eval results. Internal demo #3.
+
+### Week 4 — Polish, video, pitch (Days 22–30)
+*Non-coding week. Discipline matters here.*
+
+- **D22–24** — Demo UI polish (Antigravity): clean WhatsApp/chat view, live audit panel, the 3 golden paths runnable on demand without breaking.
+- **D25–26** — Record the demo video (max 3 min per the submission form). Use the 3-scene script: (1) Hindi Lakshya proposal, (2) Judge Agent blocks the sweep live, (3) Credit Passport → eligible to apply.
+- **D27–28** — Pitch rehearsal: 5-minute script, timed, recorded. Fix anything that takes more than 30 seconds to explain.
+- **D29–30** — Buffer + docs. Update README with real eval numbers + screenshots. Final commit. Submit.
+
+---
+
+## What NOT to build in the prototype
+
+| Feature | Why deferred |
+|---|---|
+| Victim-Shield (mule awareness) | Roadmap — no confidential RBI data access in prototype |
+| Scam-Shield (UPI intercept) | Roadmap — requires real-time payment pipeline |
+| Guru (adoption agent) | Roadmap — focus is Disha/Rakshak |
+| Swagat (acquisition agent) | Roadmap — demo a stub only |
+| Live Bhashini voice full pipeline | If API is unstable, use cached Hindi audio — judges won't notice |
+| Azure OpenAI | Nice-to-have swap for pitch credibility — not a blocker |
+
+---
+
+## Failure modes to avoid (solo)
+
+- **Data rushed** → agents have nothing believable to detect; whole demo feels fake. Day 2–3 is the most important investment.
+- **LangGraph too early** → fight the framework. Get plain Python working first (D6 before D12).
+- **10 features at 60%** → 3 paths at 95% wins every time.
+- **AI refactor breaks a working demo** → `git commit` after every working feature, no exceptions.
+- **Week 4 turns into coding** → polish/video/pitch only. This is the discipline that separates finalists.

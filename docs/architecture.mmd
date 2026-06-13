@@ -1,80 +1,61 @@
-flowchart TB
-    %% Channels
-    subgraph Channels["Channels"]
-        WA["WhatsApp Cloud API"]
-        VO["Voice — Bhashini (Indian languages)"]
-        APP["YONO / Mobile App"]
-        BM["Bank Mitra Portal"]
+flowchart TD
+    subgraph CH["📱 CHANNELS"]
+        WA["WhatsApp Cloud API"]:::ch
+        VO["Voice · Bhashini (12+ languages)"]:::ch
+        WEB["Web UI"]:::ch
+        BM["Bank Mitra Kiosk (assisted mode)"]:::ch
     end
 
-    %% Orchestrator
-    subgraph Orchestrator["Orchestrator / Agent Fabric"]
-        ORC["LangGraph Orchestrator"]
+    subgraph OR["⚙️ ORCHESTRATOR · AGENT FABRIC"]
+        RT["Intent router · LangGraph state machine · n8n workflows · memory"]:::orc
     end
 
-    %% Customer-facing Agents
-    subgraph CustomerAgents["Customer Agents"]
-        SW["Swagat — Onboarding"]
-        GU["Guru — Financial Literacy"]
-        DI["Disha — Proactive RM (Digital Engagement)"]
+    subgraph CA["🤖 CUSTOMER AGENTS"]
+        SW["Swagat — acquire"]:::agt
+        GU["Guru — adopt"]:::agt
+        DI["Disha — engage ★"]:::hot
+        RK["Rakshak — protect + include"]:::hot
     end
 
-    %% Domain Agents
-    subgraph DomainAgents["Domain Agents"]
-        KYC["KYC Agent"]
-        CR["Credit Agent"]
-        FR["Fraud Agent"]
-        SCH["Scheme-Eligibility Agent"]
-        PR["Product / RAG Agent"]
+    subgraph DOM["🧠 DOMAIN LOGIC"]
+        LK["Lakshya Engine\nauto-savings + gamification"]:::dom
+        BS["Bill Sense\nshortfall prediction"]:::dom
+        YF["Yojana Finder\nscheme eligibility + enrollment"]:::dom
+        CP["Credit Passport\nalternative-data scoring"]:::dom
+        RAG["Product RAG\nSBI docs + scheme rules"]:::dom
     end
 
-    %% Governance Layer
-    subgraph Governance["Governance Layer (DBS PURE-inspired)"]
-        JU["Judge Agent (Claude)"]
-        POL["Policy-as-Code"]
-        TIER["Autonomy Tiers — T1 / T2 / T3"]
-        AUD["Immutable Audit Log"]
-        KILL["Kill Switch"]
+    subgraph GV["🛡️ GOVERNANCE LAYER"]
+        JG["Judge Agent\n(independent model)"]:::gov
+        PC["Policy-as-Code\nRBI · UDAAP · KYC rules"]:::gov
+        AT["Autonomy Tiers\nT1 auto · T2 confirm · T3 human"]:::gov
+        AL["Immutable Audit Log\n+ Kill Switch"]:::gov
     end
 
-    %% Data Layer
-    subgraph Data["Data Layer"]
-        FLG["Financial Life Graph — Postgres + pgvector"]
-        RAG["RAG Corpus — Schemes, Products, Policies"]
-        SYN["Synthetic Customer Data"]
+    subgraph DL["🗄️ DATA LAYER"]
+        FLG["Financial Life Graph\nPostgreSQL · per-customer state"]:::data
+        VEC["RAG Corpus\npgvector · SBI docs · scheme rules"]:::data
+        SYN["Synthetic Dataset\n1,000 users × 12 months UPI history"]:::data
+        OBS["Langfuse Observability\nlive agent traces in demo"]:::data
     end
 
-    %% Inbound flows
-    WA --> ORC
-    VO --> ORC
-    APP --> ORC
-    BM --> ORC
+    CH --> OR
+    OR --> CA
+    CA --> DOM
+    DI -- "proposes action" --> GV
+    RK -- "proposes action" --> GV
+    GV -- "T1 approved\nauto-deliver" --> CH
+    GV -- "T2 approved\nawait customer confirm" --> CH
+    GV -- "T3 approved\nawait human approval" --> CH
+    GV -- "BLOCKED + reason\nlogged to audit" --> AL
+    DOM --> DL
+    CA --> DL
+    GV --> DL
 
-    %% Orchestrator to customer agents
-    ORC --> SW
-    ORC --> GU
-    ORC --> DI
-
-    %% Customer agents call domain agents
-    SW --> KYC
-    DI --> CR
-    DI --> SCH
-    DI --> FR
-    GU --> PR
-    SW --> PR
-
-    %% Engagement flow: Disha's action MUST pass through Governance
-    DI -- "proposed action" --> JU
-    JU --> POL
-    POL --> TIER
-    TIER -- "approved" --> AUD
-    AUD -- "deliver" --> ORC
-    TIER -- "blocked" --> KILL
-
-    %% Data access
-    DI --> FLG
-    SCH --> RAG
-    PR --> RAG
-    CR --> FLG
-    FR --> FLG
-    FLG --- SYN
+    classDef ch   fill:#2E2E7A,color:#fff,stroke:#1A1A4B
+    classDef orc  fill:#2E2E7A,color:#fff,stroke:#1A1A4B
+    classDef agt  fill:#3A3A88,color:#fff,stroke:#1A1A4B
+    classDef hot  fill:#FF8A3D,color:#1A1A4B,stroke:#1A1A4B,font-weight:bold
+    classDef dom  fill:#2E2E7A,color:#fff,stroke:#1A1A4B
+    classDef gov  fill:#FF8A3D,color:#1A1A4B,stroke:#1A1A4B
+    classDef data fill:#00B3A4,color:#1A1A4B,stroke:#1A1A4B
